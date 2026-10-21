@@ -8,7 +8,9 @@ Northstar is a responsive analytics dashboard demo built to make everyday busine
 
 ## Preview
 
-After the first GitHub Pages deployment, the demo will be available at: https://iamzhangjinpeng.github.io/northstar-analytics-dashboard/
+![Northstar Analytics overview](docs/dashboard-overview.jpg)
+
+Live demo: https://iamzhangjinpeng.github.io/northstar-analytics-dashboard/
 
 ## What you can explore
 

@@ -63,9 +63,18 @@ export const channelData = [
   { name: 'Direct', amount: 42600, color: '#5f7df7' },
   { name: 'Organic search', amount: 28700, color: '#79c8ad' },
   { name: 'Paid social', amount: 18400, color: '#f6b76b' },
-  { name: 'Referral', amount: 12600, color: '#b7a5f4' },
+  { name: 'Referral', amount: 8831, color: '#b7a5f4' },
   { name: 'Email', amount: 8200, color: '#e69baa' },
 ]
+
+export const productRevenueByCategory = [
+  { name: 'Home & living', amount: 38420, color: '#5f7df7' },
+  { name: 'Accessories', amount: 27108, color: '#79c8ad' },
+  { name: 'Apparel', amount: 22372, color: '#f6b76b' },
+  { name: 'Other', amount: 18831, color: '#b7a5f4' },
+]
+
+export const totalProductRevenue = productRevenueByCategory.reduce((sum, category) => sum + category.amount, 0)
 
 export const orders = [
   { id: 'ORD-2841', customer: 'Sophie Laurent', initials: 'SL', color: 'lavender', email: 'sophie.laurent@gmail.com', source: 'Direct', date: 'Oct 20, 2026', amount: 284.0, status: 'Paid' },

@@ -14,8 +14,6 @@ import {
   Command,
   CreditCard,
   Download,
-  Ellipsis,
-  ExternalLink,
   LayoutDashboard,
   Link2,
   LoaderCircle,
@@ -109,32 +107,35 @@ function downloadCsv(rows: Order[]) {
   link.href = url
   link.download = 'northstar-orders.csv'
   link.click()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function Sidebar({ activePage, onNavigate, mobileOpen, onClose }: {
+function Sidebar({ activePage, onNavigate, mobileOpen, onClose, collapsed, onToggleCollapsed }: {
   activePage: string
   onNavigate: (page: string) => void
   mobileOpen: boolean
   onClose: () => void
+  collapsed: boolean
+  onToggleCollapsed: () => void
 }) {
   return (
     <>
       {mobileOpen && <button className="mobile-scrim" aria-label="Close menu" onClick={onClose} />}
-      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`sidebar ${mobileOpen ? 'sidebar-open' : ''} ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <div className="brand-lockup">
           <div className="brand-mark"><Sparkles size={17} strokeWidth={2.1} /></div>
           <span>northstar</span>
-          <button className="icon-button collapse-button" aria-label="Collapse sidebar"><ChevronLeft size={16} /></button>
+          <button className="icon-button collapse-button" aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed} onClick={onToggleCollapsed}>
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
-        <button className="workspace-switcher" aria-label="Switch workspace">
+        <div className="workspace-card" role="group" aria-label="Current workspace">
           <span className="workspace-avatar">S</span>
           <span className="workspace-copy"><strong>Studio North</strong><small>Free workspace</small></span>
-          <ChevronDown size={15} className="muted-icon" />
-        </button>
+        </div>
 
-        <div className="sidebar-sections">
+        <div className="sidebar-sections" id="sidebar-navigation">
           {navSections.map((section) => (
             <div className="nav-section" key={section.label}>
               <div className="nav-label">{section.label}</div>
@@ -144,6 +145,8 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }: {
                   key={label}
                   onClick={() => { onNavigate(label); onClose() }}
                   aria-current={activePage === label ? 'page' : undefined}
+                  aria-label={label}
+                  title={collapsed ? label : undefined}
                 >
                   <Icon size={17} strokeWidth={1.8} />
                   <span>{label}</span>
@@ -164,7 +167,7 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose }: {
           <button className="profile-row" onClick={() => onNavigate('Settings')}>
             <span className="profile-avatar">AM</span>
             <span className="profile-copy"><strong>Alex Morgan</strong><small>alex@studionorth.co</small></span>
-            <Ellipsis size={17} className="muted-icon" />
+            <ChevronRight size={16} className="muted-icon" />
           </button>
         </div>
       </aside>
@@ -186,7 +189,6 @@ function KpiCard({ title, value, change, caption, icon: Icon, tone, sparkline }:
     <article className="kpi-card">
       <div className="kpi-topline">
         <div className={`kpi-icon kpi-icon-${tone}`}><Icon size={17} strokeWidth={1.9} /></div>
-        <button className="icon-button more-button" aria-label={`More options for ${title}`}><Ellipsis size={18} /></button>
       </div>
       <div className="kpi-label">{title}</div>
       <div className="kpi-value tabular-nums">{value}</div>
@@ -226,7 +228,6 @@ function ChannelChart({ onOpenReport }: { onOpenReport: () => void }) {
     <section className="panel channel-panel">
       <div className="panel-heading">
         <div><h2>Sales by channel</h2><p>Where your revenue comes from</p></div>
-        <button className="icon-button" aria-label="Channel report options"><Ellipsis size={18} /></button>
       </div>
       <div className="channel-chart-wrap">
         <div className="donut-wrap">
@@ -251,7 +252,7 @@ function ChannelChart({ onOpenReport }: { onOpenReport: () => void }) {
           })}
         </div>
       </div>
-      <div className="channel-total"><span>Revenue from all channels</span><strong className="tabular-nums">$106,731</strong></div>
+      <div className="channel-total"><span>Revenue from all channels</span><strong className="tabular-nums">${total.toLocaleString('en-US')}</strong></div>
       <button className="text-link" onClick={onOpenReport}>View channel report <ArrowRight size={14} /></button>
     </section>
   )
@@ -263,16 +264,21 @@ export default function App() {
   const [range, setRange] = useState<RangeKey>('30D')
   const [metric, setMetric] = useState<MetricKey>('revenue')
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [query, setQuery] = useState('')
+  const [orderStatus, setOrderStatus] = useState('All statuses')
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState('')
   const trend = getTrend(range)
   const selectedMetric = metricOptions.find((item) => item.id === metric)!
   const filteredOrders = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return orders
-    return orders.filter((order) => `${order.id} ${order.customer} ${order.email} ${order.source} ${order.status}`.toLowerCase().includes(normalized))
-  }, [query])
+    return orders.filter((order) => {
+      const matchesQuery = !normalized || `${order.id} ${order.customer} ${order.email} ${order.source} ${order.status}`.toLowerCase().includes(normalized)
+      const matchesStatus = orderStatus === 'All statuses' || order.status === orderStatus
+      return matchesQuery && matchesStatus
+    })
+  }, [query, orderStatus])
 
   const notify = (message: string) => {
     setToast(message)
@@ -281,7 +287,7 @@ export default function App() {
 
   const handleRefresh = () => {
     setRefreshing(true)
-    window.setTimeout(() => { setRefreshing(false); notify('Dashboard data is up to date') }, 800)
+    window.setTimeout(() => { setRefreshing(false); notify('Sample dashboard refreshed') }, 800)
   }
 
   const handleExport = () => {
@@ -300,14 +306,14 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar activePage={activePage} onNavigate={navigateToPage} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+    <div className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
+      <Sidebar activePage={activePage} onNavigate={navigateToPage} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
       <main className="main-area">
         <header className="topbar">
           <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}><Menu size={20} /></button>
           <div className="breadcrumbs"><span>Workspace</span><ChevronRight size={14} /><strong>{pageTitle}</strong></div>
           <div className="topbar-actions">
-            <button className="help-link" onClick={() => notify('Help center coming soon')}><CircleHelp size={16} /> Help center</button>
+            <a className="help-link" href="https://github.com/iamzhangjinpeng/northstar-analytics-dashboard#readme" target="_blank" rel="noreferrer"><CircleHelp size={16} /> Help & documentation</a>
             <span className="topbar-divider" />
             <button className="icon-button notification-button" aria-label="Notifications" onClick={() => notify('You’re all caught up')}><Bell size={18} /><i /></button>
             <button className="top-avatar" aria-label="Open profile menu" onClick={() => navigateToPage('Settings')}>AM</button>
@@ -343,7 +349,6 @@ export default function App() {
             <div className="panel trend-panel">
               <div className="panel-heading trend-heading">
                 <div><h2>Performance over time</h2><p>Track how your store is doing</p></div>
-                <button className="icon-button chart-more" aria-label="Performance options"><Ellipsis size={18} /></button>
               </div>
               <div className="chart-toolbar">
                 <div className="metric-switcher" aria-label="Choose chart metric">
@@ -376,17 +381,17 @@ export default function App() {
           </section>
 
           <section className="panel orders-panel">
-            <div className="orders-heading">
-              <div className="panel-heading-copy"><div className="title-with-badge"><h2>Recent orders</h2><span className="count-badge">1,284</span></div><p>A snapshot of your latest sales activity</p></div>
+              <div className="orders-heading">
+              <div className="panel-heading-copy"><div className="title-with-badge"><h2>Recent orders</h2><span className="count-badge">{orders.length}</span></div><p>A snapshot of the latest sample orders</p></div>
               <div className="orders-actions">
                 <label className="search-box"><Search size={15} /><input aria-label="Search orders" placeholder="Search orders" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd><Command size={10} /> K</kbd></label>
-                <button className="table-filter" onClick={() => notify('Filters: all statuses')}><SlidersHorizontal size={15} /> Filter</button>
+                <label className="table-filter-control"><SlidersHorizontal size={15} /><select aria-label="Filter orders by status" value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}><option>All statuses</option><option>Paid</option><option>Processing</option><option>Refunded</option></select></label>
                 <button className="view-all" onClick={() => navigateToPage('Orders')}>View all <ArrowRight size={14} /></button>
               </div>
             </div>
             <div className="table-scroll">
               <table>
-                <thead><tr><th>ORDER</th><th>CUSTOMER</th><th>SOURCE</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th aria-label="Actions" /></tr></thead>
+                <thead><tr><th>ORDER</th><th>CUSTOMER</th><th>SOURCE</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th></tr></thead>
                 <tbody>
                   {filteredOrders.length ? filteredOrders.map((order) => <tr key={order.id}>
                     <td className="order-id">{order.id}</td>
@@ -395,15 +400,14 @@ export default function App() {
                     <td className="date-cell">{order.date}</td>
                     <td className="amount-cell tabular-nums">${order.amount.toFixed(2)}</td>
                     <td><span className={`status status-${order.status.toLowerCase()}`}><span />{order.status}</span></td>
-                    <td><button className="icon-button row-more" aria-label={`More options for ${order.id}`}><Ellipsis size={17} /></button></td>
-                  </tr>) : <tr><td colSpan={7} className="empty-state"><Search size={20} /><strong>No orders found</strong><span>Try another name, order ID, or channel.</span></td></tr>}
+                  </tr>) : <tr><td colSpan={6} className="empty-state"><Search size={20} /><strong>No orders found</strong><span>Try another name, order ID, or channel.</span></td></tr>}
                 </tbody>
               </table>
             </div>
-            <div className="table-footer"><span>Showing <strong>{filteredOrders.length}</strong> of <strong>1,284</strong> orders</span><div className="pagination"><button aria-label="Previous page" disabled><ChevronLeft size={15} /></button><span>1</span><button aria-label="Next page" onClick={() => notify('You are viewing the latest orders')}><ChevronRight size={15} /></button></div></div>
+            <div className="table-footer"><span>Showing <strong>{filteredOrders.length}</strong> of <strong>{orders.length}</strong> sample orders</span></div>
           </section>
 
-          <footer className="page-footer"><span>© 2026 Northstar Analytics</span><span>All figures are sample data for demonstration.</span><button onClick={handleRefresh}><ExternalLink size={13} /> Data updated 2 min ago</button></footer>
+          <footer className="page-footer"><span>© 2026 Northstar Analytics</span><span>All figures are sample data for demonstration.</span><button onClick={handleRefresh}><Activity size={13} /> Refresh demo data</button></footer>
         </div>
           } />
           {secondaryRoutes.map(({ path: routePath, page }) => <Route key={routePath} path={routePath} element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page={page} onNotify={notify} onNavigate={navigate} /></Suspense>} />)}
@@ -411,7 +415,7 @@ export default function App() {
         </Routes>
       </main>
       <div className="floating-actions">
-        <button className="refresh-button" onClick={handleRefresh} disabled={refreshing}>{refreshing ? <LoaderCircle className="spin" size={15} /> : <Activity size={15} />}{refreshing ? 'Refreshing' : 'Refresh'}</button>
+        <button className="refresh-button" onClick={handleRefresh} disabled={refreshing}>{refreshing ? <LoaderCircle className="spin" size={15} /> : <Activity size={15} />}{refreshing ? 'Refreshing' : 'Refresh demo'}</button>
         {(activePage === 'Overview' || activePage === 'Orders') && <button className="export-button" onClick={handleExport}><Download size={15} /> Export CSV</button>}
       </div>
       {toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
