@@ -7,7 +7,6 @@ import {
   Bell,
   CalendarDays,
   Check,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -41,7 +40,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { channelData, getTrend, orders, type MetricKey, type Order, type RangeKey } from './data'
+import { defaultDemoSettings, getChannelData, getTrend, orders, periodTotals, type DemoSettings, type MetricKey, type Order, type RangeKey } from './data'
 
 const SecondaryPage = lazy(() => import('./secondary-pages').then(({ SecondaryPage: Page }) => ({ default: Page })))
 
@@ -64,7 +63,7 @@ const navSections = [
   {
     label: 'MANAGE',
     items: [
-      { label: 'Orders', icon: ShoppingBag, count: '12' },
+      { label: 'Orders', icon: ShoppingBag, count: String(orders.length) },
       { label: 'Payments', icon: CreditCard },
       { label: 'Integrations', icon: Link2 },
       { label: 'Settings', icon: Settings2 },
@@ -110,14 +109,16 @@ function downloadCsv(rows: Order[]) {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function Sidebar({ activePage, onNavigate, mobileOpen, onClose, collapsed, onToggleCollapsed }: {
+function Sidebar({ activePage, onNavigate, mobileOpen, onClose, collapsed, onToggleCollapsed, settings }: {
   activePage: string
   onNavigate: (page: string) => void
   mobileOpen: boolean
   onClose: () => void
   collapsed: boolean
   onToggleCollapsed: () => void
+  settings: DemoSettings
 }) {
+  const initials = `${settings.firstName.slice(0, 1)}${settings.lastName.slice(0, 1)}`
   return (
     <>
       {mobileOpen && <button className="mobile-scrim" aria-label="Close menu" onClick={onClose} />}
@@ -131,8 +132,8 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose, collapsed, onTog
         </div>
 
         <div className="workspace-card" role="group" aria-label="Current workspace">
-          <span className="workspace-avatar">S</span>
-          <span className="workspace-copy"><strong>Studio North</strong><small>Free workspace</small></span>
+          <span className="workspace-avatar">{settings.workspaceName.slice(0, 1).toUpperCase()}</span>
+          <span className="workspace-copy"><strong>{settings.workspaceName}</strong><small>Free workspace</small></span>
         </div>
 
         <div className="sidebar-sections" id="sidebar-navigation">
@@ -165,8 +166,8 @@ function Sidebar({ activePage, onNavigate, mobileOpen, onClose, collapsed, onTog
             <button onClick={() => onNavigate('Integrations')}>Explore integrations <ArrowRight size={14} /></button>
           </div>
           <button className="profile-row" onClick={() => onNavigate('Settings')}>
-            <span className="profile-avatar">AM</span>
-            <span className="profile-copy"><strong>Alex Morgan</strong><small>alex@studionorth.co</small></span>
+            <span className="profile-avatar">{initials}</span>
+            <span className="profile-copy"><strong>{settings.firstName} {settings.lastName}</strong><small>{settings.email}</small></span>
             <ChevronRight size={16} className="muted-icon" />
           </button>
         </div>
@@ -222,8 +223,8 @@ function TrendTooltip({ active, payload, label, metric }: { active?: boolean; pa
   )
 }
 
-function ChannelChart({ onOpenReport }: { onOpenReport: () => void }) {
-  const total = channelData.reduce((sum, channel) => sum + channel.amount, 0)
+function ChannelChart({ channels, onOpenReport }: { channels: ReturnType<typeof getChannelData>; onOpenReport: () => void }) {
+  const total = channels.reduce((sum, channel) => sum + channel.amount, 0)
   return (
     <section className="panel channel-panel">
       <div className="panel-heading">
@@ -233,8 +234,8 @@ function ChannelChart({ onOpenReport }: { onOpenReport: () => void }) {
         <div className="donut-wrap">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={channelData} dataKey="amount" nameKey="name" cx="50%" cy="50%" innerRadius="70%" outerRadius="91%" paddingAngle={3} stroke="none" cornerRadius={4}>
-                {channelData.map((channel) => <Cell key={channel.name} fill={channel.color} />)}
+              <Pie data={channels} dataKey="amount" nameKey="name" cx="50%" cy="50%" innerRadius="70%" outerRadius="91%" paddingAngle={3} stroke="none" cornerRadius={4}>
+                {channels.map((channel) => <Cell key={channel.name} fill={channel.color} />)}
               </Pie>
               <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} />
             </PieChart>
@@ -242,7 +243,7 @@ function ChannelChart({ onOpenReport }: { onOpenReport: () => void }) {
           <div className="donut-center"><strong>5</strong><span>channels</span></div>
         </div>
         <div className="channel-legend">
-          {channelData.map((channel) => {
+          {channels.map((channel) => {
             const share = Math.round((channel.amount / total) * 100)
             return <div className="legend-row" key={channel.name}>
               <span className="legend-dot" style={{ backgroundColor: channel.color }} />
@@ -269,7 +270,21 @@ export default function App() {
   const [orderStatus, setOrderStatus] = useState('All statuses')
   const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState('')
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [demoSettings, setDemoSettings] = useState<DemoSettings>(() => {
+    try {
+      const saved = sessionStorage.getItem('northstar-demo-settings')
+      return saved ? { ...defaultDemoSettings, ...JSON.parse(saved), currency: defaultDemoSettings.currency } : defaultDemoSettings
+    } catch {
+      return defaultDemoSettings
+    }
+  })
   const trend = getTrend(range)
+  const channels = getChannelData(range)
+  const totals = periodTotals[range]
+  const conversionRate = (totals.orders / totals.visitors * 100).toFixed(2)
+  const periodLabel = range === '7D' ? 'last 7 days' : range === '90D' ? 'last 90 days' : 'last 30 days'
+  const initials = `${demoSettings.firstName.slice(0, 1)}${demoSettings.lastName.slice(0, 1)}`
   const selectedMetric = metricOptions.find((item) => item.id === metric)!
   const filteredOrders = useMemo(() => {
     const normalized = query.trim().toLowerCase()
@@ -307,7 +322,7 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarCollapsed ? 'sidebar-is-collapsed' : ''}`}>
-      <Sidebar activePage={activePage} onNavigate={navigateToPage} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} />
+      <Sidebar activePage={activePage} onNavigate={navigateToPage} mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} collapsed={sidebarCollapsed} onToggleCollapsed={() => setSidebarCollapsed((value) => !value)} settings={demoSettings} />
       <main className="main-area">
         <header className="topbar">
           <button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}><Menu size={20} /></button>
@@ -315,8 +330,11 @@ export default function App() {
           <div className="topbar-actions">
             <a className="help-link" href="https://github.com/iamzhangjinpeng/northstar-analytics-dashboard#readme" target="_blank" rel="noreferrer"><CircleHelp size={16} /> Help & documentation</a>
             <span className="topbar-divider" />
-            <button className="icon-button notification-button" aria-label="Notifications" onClick={() => notify('You’re all caught up')}><Bell size={18} /><i /></button>
-            <button className="top-avatar" aria-label="Open profile menu" onClick={() => navigateToPage('Settings')}>AM</button>
+            <div className="notification-wrap">
+              <button className="icon-button notification-button" aria-label="Notifications" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}><Bell size={18} /></button>
+              {notificationsOpen && <div className="notification-popover"><strong>You’re all caught up</strong><span>No new notifications in this demo workspace.</span></div>}
+            </div>
+            <button className="top-avatar" aria-label="Open profile menu" onClick={() => navigateToPage('Settings')}>{initials}</button>
           </div>
         </header>
 
@@ -327,34 +345,34 @@ export default function App() {
           <section className="page-intro">
             <div>
               <div className="eyebrow"><span className="live-dot" /> YOUR BUSINESS AT A GLANCE</div>
-              <h1>Good morning, Alex <span className="wave">✦</span></h1>
+              <h1>Good morning, {demoSettings.firstName} <span className="wave">✦</span></h1>
               <p>Here’s what’s happening with your store today.</p>
             </div>
             <div className="intro-actions">
               <div className="range-switch" aria-label="Select date range">
                 {(['7D', '30D', '90D'] as RangeKey[]).map((value) => <button className={range === value ? 'range-active' : ''} key={value} onClick={() => setRange(value)}>{value}</button>)}
               </div>
-              <button className="date-button" onClick={() => notify(`Showing the last ${range === '7D' ? '7' : range === '30D' ? '30' : '90'} days`)}><CalendarDays size={15} /><span>{range === '7D' ? 'Oct 14 – Oct 20' : range === '90D' ? 'Jul 23 – Oct 20' : 'Sep 21 – Oct 20'}</span><ChevronDown size={14} /></button>
+              <div className="date-range-label"><CalendarDays size={15} /><span>{range === '7D' ? 'Oct 14 – Oct 20' : range === '90D' ? 'Jul 23 – Oct 20' : 'Sep 21 – Oct 20'}</span></div>
             </div>
           </section>
 
           <section className="kpi-grid" aria-label="Key performance indicators">
-            <KpiCard title="Total revenue" value="$106,731" change="12.8%" caption="vs. last month" icon={CreditCard} tone="blue" sparkline={[4, 5, 4, 7, 6, 8, 7, 11, 9, 13, 12, 17]} />
-            <KpiCard title="Total orders" value="2,847" change="8.2%" caption="vs. last month" icon={ShoppingBag} tone="green" sparkline={[5, 4, 7, 6, 8, 7, 9, 8, 11, 10, 14, 16]} />
-            <KpiCard title="Store visitors" value="38,492" change="18.6%" caption="vs. last month" icon={UsersRound} tone="orange" sparkline={[3, 5, 4, 8, 6, 10, 8, 9, 12, 10, 16, 19]} />
-            <KpiCard title="Conversion rate" value="3.24%" change="-0.4%" caption="vs. last month" icon={MousePointer2} tone="purple" sparkline={[16, 14, 16, 13, 15, 14, 12, 14, 11, 13, 10, 9]} />
+            <KpiCard title="Total revenue" value={`$${totals.revenue.toLocaleString('en-US')}`} change="12.8%" caption="vs. previous period" icon={CreditCard} tone="blue" sparkline={[4, 5, 4, 7, 6, 8, 7, 11, 9, 13, 12, 17]} />
+            <KpiCard title="Total orders" value={totals.orders.toLocaleString('en-US')} change="8.2%" caption="vs. previous period" icon={ShoppingBag} tone="green" sparkline={[5, 4, 7, 6, 8, 7, 9, 8, 11, 10, 14, 16]} />
+            <KpiCard title="Store visitors" value={totals.visitors.toLocaleString('en-US')} change="18.6%" caption="vs. previous period" icon={UsersRound} tone="orange" sparkline={[3, 5, 4, 8, 6, 10, 8, 9, 12, 10, 16, 19]} />
+            <KpiCard title="Conversion rate" value={`${conversionRate}%`} change="-0.4%" caption="vs. previous period" icon={MousePointer2} tone="purple" sparkline={[16, 14, 16, 13, 15, 14, 12, 14, 11, 13, 10, 9]} />
           </section>
 
           <section className="analytics-grid">
             <div className="panel trend-panel">
               <div className="panel-heading trend-heading">
-                <div><h2>Performance over time</h2><p>Track how your store is doing</p></div>
+                <div><h2>Performance over time</h2><p>Sample performance · {periodLabel}</p></div>
               </div>
               <div className="chart-toolbar">
                 <div className="metric-switcher" aria-label="Choose chart metric">
                   {metricOptions.map((option) => <button key={option.id} className={metric === option.id ? 'metric-active' : ''} onClick={() => setMetric(option.id)}><span style={{ backgroundColor: option.color }} />{option.label}</button>)}
                 </div>
-                <div className="chart-note"><span className="chart-note-dot" />Compared to previous period</div>
+                <div className="chart-note">Period totals are split across the displayed intervals</div>
               </div>
               <div className="trend-chart">
                 <ResponsiveContainer width="100%" height="100%">
@@ -370,12 +388,12 @@ export default function App() {
               </div>
               <div className="chart-footer"><span><strong>+24.6%</strong> <span>compared to previous period</span></span><button className="text-link" onClick={() => navigateToPage('Revenue')}>View report <ArrowRight size={14} /></button></div>
             </div>
-            <ChannelChart onOpenReport={() => navigateToPage('Revenue')} />
+            <ChannelChart channels={channels} onOpenReport={() => navigateToPage('Revenue')} />
           </section>
 
           <section className="panel insight-banner">
             <div className="insight-orb"><Sparkles size={17} /></div>
-            <div className="insight-copy"><strong>A little insight for you</strong><span>Direct traffic is up <b>24%</b> this month. Your returning customers are driving the increase.</span></div>
+            <div className="insight-copy"><strong>A little insight for you</strong><span>Direct drives <b>40%</b> of revenue. Returning and loyal customers make up <b>38.4%</b> of your customer base.</span></div>
             <button onClick={() => navigateToPage('Revenue')}>Explore insight <ArrowRight size={14} /></button>
             <button className="icon-button insight-close" aria-label="Dismiss insight" onClick={(event) => event.currentTarget.closest('.insight-banner')?.remove()}><X size={15} /></button>
           </section>
@@ -410,8 +428,8 @@ export default function App() {
           <footer className="page-footer"><span>© 2026 Northstar Analytics</span><span>All figures are sample data for demonstration.</span><button onClick={handleRefresh}><Activity size={13} /> Refresh demo data</button></footer>
         </div>
           } />
-          {secondaryRoutes.map(({ path: routePath, page }) => <Route key={routePath} path={routePath} element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page={page} onNotify={notify} onNavigate={navigate} /></Suspense>} />)}
-          <Route path="*" element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page="Not found" onNotify={notify} onNavigate={navigate} /></Suspense>} />
+          {secondaryRoutes.map(({ path: routePath, page }) => <Route key={routePath} path={routePath} element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page={page} onNotify={notify} onNavigate={navigate} onSettingsSaved={setDemoSettings} /></Suspense>} />)}
+          <Route path="*" element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page="Not found" onNotify={notify} onNavigate={navigate} onSettingsSaved={setDemoSettings} /></Suspense>} />
         </Routes>
       </main>
       <div className="floating-actions">

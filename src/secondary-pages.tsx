@@ -34,7 +34,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { channelData, getTrend, orders, productRevenueByCategory, totalProductRevenue, type Order } from './data'
+import { averageOrderValue, defaultDemoSettings, getChannelData, getTrend, netRevenue, orders, periodTotals, productRevenueByCategory, refundTotal, totalProductRevenue, type DemoSettings, type Order } from './data'
 
 type Notify = (message: string) => void
 
@@ -110,12 +110,13 @@ function EmptyRow({ colSpan, title = 'No results found' }: { colSpan: number; ti
 }
 
 function RevenuePage({ onNotify }: { onNotify: Notify }) {
-  const revenue = getTrend('90D')
+  const revenue = getTrend('30D')
+  const channels = getChannelData('30D')
   const handleExport = () => {
     const rows = [
-      ...revenue.map((point) => ['Trend', point.day, point.revenue, 'Weekly']),
+      ...revenue.map((point) => ['Trend', point.day, point.revenue, 'Interval']),
       ...productRevenueByCategory.map((item) => ['Category', item.name, item.amount, '']),
-      ...channelData.map((item) => ['Channel', item.name, item.amount, '']),
+      ...channels.map((item) => ['Channel', item.name, item.amount, '']),
     ]
     downloadCsv('northstar-revenue-report.csv', ['Section', 'Label', 'Revenue (USD)', 'Period'], rows)
     onNotify('Revenue report downloaded')
@@ -123,13 +124,13 @@ function RevenuePage({ onNotify }: { onNotify: Notify }) {
   return <div className="content-wrap route-page">
     <PageHeading kicker="REVENUE INTELLIGENCE" title="Revenue" description="Understand what you earn, where it comes from, and how it is changing." actions={<button className="primary-button" onClick={handleExport}><Download size={15} /> Export report</button>} />
     <div className="kpi-grid route-kpis">
-      <StatTile label="Gross revenue" value="$106,731" change="12.8%" icon={CircleDollarSign} tone="blue" />
-      <StatTile label="Net revenue" value="$98,462" change="10.4%" icon={WalletCards} tone="green" />
-      <StatTile label="Average order value" value="$37.49" change="4.1%" icon={ShoppingBag} tone="orange" />
-      <StatTile label="Refunds" value="$2,148" change="-2.3%" icon={CreditCard} tone="purple" />
+      <StatTile label="Gross revenue" value={`$${totalProductRevenue.toLocaleString('en-US')}`} change="12.8%" icon={CircleDollarSign} tone="blue" />
+      <StatTile label="Net revenue" value={`$${netRevenue.toLocaleString('en-US')}`} change="10.4%" icon={WalletCards} tone="green" />
+      <StatTile label="Average order value" value={`$${averageOrderValue.toFixed(2)}`} change="4.1%" icon={ShoppingBag} tone="orange" />
+      <StatTile label="Refunds" value={`$${refundTotal.toLocaleString('en-US')}`} change="-2.3%" icon={CreditCard} tone="purple" />
     </div>
     <div className="route-two-column revenue-grid">
-      <Panel title="Revenue over time" description="Weekly gross revenue · last 90 days" action={<span className="select-button">Weekly</span>}>
+      <Panel title="Revenue over time" description="Gross revenue · last 30 days" action={<span className="select-button">Last 30 days</span>}>
         <div className="route-area-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={revenue} margin={{ top: 12, right: 8, left: -14, bottom: 0 }}><defs><linearGradient id="routeRevenueFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#5f7df7" stopOpacity={0.2} /><stop offset="100%" stopColor="#5f7df7" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#edf0f4" strokeDasharray="3 5" /><XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#8c96a8', fontSize: 10 }} tickMargin={10} interval="preserveStartEnd" /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#8c96a8', fontSize: 10 }} tickFormatter={(value: number) => `$${Math.round(value / 1000)}k`} width={50} /><Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, 'Revenue']} /><Area type="monotone" dataKey="revenue" stroke="#5f7df7" strokeWidth={2.5} fill="url(#routeRevenueFill)" dot={false} activeDot={{ r: 5 }} /></AreaChart></ResponsiveContainer></div>
         <div className="route-chart-legend"><span className="legend-dot" style={{ background: '#5f7df7' }} />Gross revenue <span className="legend-note">vs. previous period <b>+12.8%</b></span></div>
       </Panel>
@@ -139,18 +140,28 @@ function RevenuePage({ onNotify }: { onNotify: Notify }) {
         <div className="route-note"><Sparkles size={14} /> Home & living is your top category this month.</div>
       </Panel>
     </div>
-    <Panel title="Revenue by channel" description="Compare net sales across your acquisition channels">
-      <div className="channel-breakdown">{channelData.map((channel) => <div className="channel-breakdown-row" key={channel.name}><span className="legend-dot" style={{ background: channel.color }} /><span>{channel.name}</span><div className="channel-track"><i style={{ width: `${channel.amount / 426}%`, background: channel.color }} /></div><strong>${channel.amount.toLocaleString()}</strong><small>{Math.round(channel.amount / totalProductRevenue * 100)}%</small></div>)}</div>
+    <Panel title="Revenue by channel" description="Compare gross sales across your acquisition channels · last 30 days">
+      <div className="channel-breakdown">{channels.map((channel) => <div className="channel-breakdown-row" key={channel.name}><span className="legend-dot" style={{ background: channel.color }} /><span>{channel.name}</span><div className="channel-track"><i style={{ width: `${channel.amount / Math.max(...channels.map((item) => item.amount)) * 100}%`, background: channel.color }} /></div><strong>${channel.amount.toLocaleString()}</strong><small>{Math.round(channel.amount / totalProductRevenue * 100)}%</small></div>)}</div>
     </Panel>
     <PageFooter />
   </div>
 }
 
 const customerTrend = [
-  { week: 'Sep 1', customers: 920 }, { week: 'Sep 8', customers: 1010 }, { week: 'Sep 15', customers: 980 },
-  { week: 'Sep 22', customers: 1120 }, { week: 'Sep 29', customers: 1180 }, { week: 'Oct 6', customers: 1320 },
-  { week: 'Oct 13', customers: 1395 }, { week: 'Oct 20', customers: 1510 },
+  { week: 'Sep 1', customers: 225 }, { week: 'Sep 8', customers: 248 }, { week: 'Sep 15', customers: 263 },
+  { week: 'Sep 22', customers: 281 }, { week: 'Sep 29', customers: 354 }, { week: 'Oct 6', customers: 366 },
+  { week: 'Oct 13', customers: 375 }, { week: 'Oct 20', customers: 391 },
 ]
+
+const customerSegmentData = [
+  { name: 'New customers', count: 9130, color: '#5f7df7' },
+  { name: 'Returning', count: 4200, color: '#79c8ad' },
+  { name: 'Loyal', count: 2810, color: '#f6b76b' },
+  { name: 'At risk', count: 2114, color: '#e69baa' },
+]
+const totalCustomers = customerSegmentData.reduce((sum, segment) => sum + segment.count, 0)
+const newCustomersThisMonth = customerTrend.slice(-4).reduce((sum, point) => sum + point.customers, 0)
+const returningCustomerRate = ((customerSegmentData[1].count + customerSegmentData[2].count) / totalCustomers * 100).toFixed(1)
 
 const customerRows = [
   { name: 'Sophie Laurent', email: 'sophie.laurent@gmail.com', orders: 8, spent: '$2,184.00', joined: 'Oct 20, 2026', initials: 'SL', color: 'lavender', segment: 'Loyal' },
@@ -172,17 +183,17 @@ function CustomersPage({ onNotify }: { onNotify: Notify }) {
   return <div className="content-wrap route-page">
     <PageHeading kicker="CUSTOMER OVERVIEW" title="Customers" description="See who is buying, coming back, and growing with your business." actions={<button className="primary-button" onClick={handleExport}><Download size={15} /> Export CSV</button>} />
     <div className="kpi-grid route-kpis">
-      <StatTile label="Total customers" value="18,254" change="9.6%" icon={UsersRound} tone="blue" />
-      <StatTile label="New this month" value="1,486" change="14.2%" icon={Sparkles} tone="green" />
-      <StatTile label="Returning customers" value="38.4%" change="5.8%" icon={ArrowUpRight} tone="orange" />
+      <StatTile label="Total customers" value={totalCustomers.toLocaleString('en-US')} change="9.6%" icon={UsersRound} tone="blue" />
+      <StatTile label="New this month" value={newCustomersThisMonth.toLocaleString('en-US')} change="14.2%" icon={Sparkles} tone="green" />
+      <StatTile label="Returning customers" value={`${returningCustomerRate}%`} change="5.8%" icon={ArrowUpRight} tone="orange" />
       <StatTile label="Lifetime value" value="$284.62" change="7.1%" icon={CircleDollarSign} tone="purple" />
     </div>
     <div className="route-two-column customer-grid">
-      <Panel title="Customer growth" description="New customers by week · last 8 weeks" action={<span className="panel-total">+1,510 <small>this week</small></span>}>
+      <Panel title="Customer growth" description="New customers by week · last 8 weeks" action={<span className="panel-total">+{customerTrend.at(-1)?.customers.toLocaleString('en-US')} <small>this week</small></span>}>
         <div className="route-area-chart customer-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={customerTrend} margin={{ top: 12, right: 8, left: -15, bottom: 0 }}><defs><linearGradient id="customerFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#79c8ad" stopOpacity={0.22} /><stop offset="100%" stopColor="#79c8ad" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#edf0f4" strokeDasharray="3 5" /><XAxis dataKey="week" axisLine={false} tickLine={false} tick={{ fill: '#8c96a8', fontSize: 10 }} tickMargin={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#8c96a8', fontSize: 10 }} width={40} /><Tooltip formatter={(value) => [Number(value).toLocaleString(), 'Customers']} /><Area type="monotone" dataKey="customers" stroke="#68b79a" strokeWidth={2.5} fill="url(#customerFill)" dot={false} activeDot={{ r: 5 }} /></AreaChart></ResponsiveContainer></div>
       </Panel>
       <Panel title="Customer segments" description="Your audience at a glance">
-        <div className="segment-list"><SegmentRow name="New customers" count="1,486" percent={42} color="#5f7df7" /><SegmentRow name="Returning" count="987" percent={31} color="#79c8ad" /><SegmentRow name="Loyal" count="642" percent={19} color="#f6b76b" /><SegmentRow name="At risk" count="218" percent={8} color="#e69baa" /></div>
+        <div className="segment-list">{customerSegmentData.map((segment) => <SegmentRow key={segment.name} name={segment.name} count={segment.count.toLocaleString('en-US')} percent={Math.round(segment.count / totalCustomers * 100)} color={segment.color} />)}</div>
       </Panel>
     </div>
     <Panel title="Top customers" description="Sample customers with the highest lifetime spend" action={<div className="panel-actions"><SearchField value={query} onChange={setQuery} placeholder="Search customers" /><label className="table-filter-control"><Filter size={14} /><select aria-label="Filter customers by segment" value={segment} onChange={(event) => setSegment(event.target.value)}><option>All segments</option><option>New</option><option>Returning</option><option>Loyal</option></select></label></div>}>
@@ -276,9 +287,9 @@ function OrdersPage({ onNotify }: { onNotify: Notify }) {
   return <div className="content-wrap route-page">
     <PageHeading kicker="ORDER MANAGEMENT" title="Orders" description="Review and manage recent orders from every sales channel." actions={<button className="primary-button" onClick={handleExport}><Download size={15} /> Export orders</button>} />
     <div className="kpi-grid route-kpis three-kpis">
-      <StatTile label="Total orders" value="1,284" change="8.2%" icon={ShoppingBag} tone="blue" />
+      <StatTile label="Total orders" value={periodTotals['30D'].orders.toLocaleString('en-US')} change="8.2%" icon={ShoppingBag} tone="blue" />
       <StatTile label="Awaiting fulfillment" value="36" change="-4.1%" icon={Package} tone="orange" />
-      <StatTile label="Average order value" value="$83.05" change="5.4%" icon={CircleDollarSign} tone="green" />
+      <StatTile label="Average order value" value={`$${averageOrderValue.toFixed(2)}`} change="5.4%" icon={CircleDollarSign} tone="green" />
     </div>
     <Panel title="Sample orders" description="Search and filter the sample records included in this demo" action={<div className="panel-actions"><SearchField value={query} onChange={setQuery} placeholder="Search orders" /><select className="select-button status-select" aria-label="Filter orders by status" value={status} onChange={(event) => setStatus(event.target.value)}><option>All statuses</option><option>Paid</option><option>Processing</option><option>Refunded</option></select></div>}>
       <div className="table-scroll"><table className="management-table"><thead><tr><th>ORDER</th><th>CUSTOMER</th><th>SOURCE</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th></tr></thead><tbody>{filtered.length ? filtered.map((order) => <OrderRow key={order.id} order={order} />) : <EmptyRow colSpan={6} title="No orders match these filters" />}</tbody></table></div>
@@ -329,34 +340,21 @@ function PaymentsPage({ onNotify }: { onNotify: Notify }) {
   </div>
 }
 
-const defaultDemoSettings = {
-  firstName: 'Alex',
-  lastName: 'Morgan',
-  email: 'alex@studionorth.co',
-  role: 'Owner',
-  weeklyDigest: true,
-  orderAlerts: true,
-  marketing: false,
-  workspaceName: 'Studio North',
-  storeUrl: 'studio-north.example.com',
-  currency: 'USD · US Dollar',
-}
-type DemoSettings = typeof defaultDemoSettings
-
 function readDemoSettings(): DemoSettings {
   try {
     const saved = sessionStorage.getItem('northstar-demo-settings')
-    return saved ? { ...defaultDemoSettings, ...JSON.parse(saved) } : defaultDemoSettings
+    return saved ? { ...defaultDemoSettings, ...JSON.parse(saved), currency: defaultDemoSettings.currency } : defaultDemoSettings
   } catch {
     return defaultDemoSettings
   }
 }
 
-function SettingsPage({ onNotify }: { onNotify: Notify }) {
+function SettingsPage({ onNotify, onSettingsSaved }: { onNotify: Notify; onSettingsSaved?: (settings: DemoSettings) => void }) {
   const [saved, setSaved] = useState(false)
   const [settings, setSettings] = useState<DemoSettings>(readDemoSettings)
   const save = () => {
     sessionStorage.setItem('northstar-demo-settings', JSON.stringify(settings))
+    onSettingsSaved?.(settings)
     setSaved(true)
     onNotify('Demo settings saved for this browser session')
     window.setTimeout(() => setSaved(false), 1800)
@@ -372,7 +370,7 @@ function SettingsPage({ onNotify }: { onNotify: Notify }) {
         <div className="toggle-list"><ToggleRow title="Weekly performance digest" description="A summary of your store’s activity every Monday." checked={settings.weeklyDigest} onChange={(checked) => setSettings((current) => ({ ...current, weeklyDigest: checked }))} /><ToggleRow title="New order alerts" description="Get an email when a new order comes in." checked={settings.orderAlerts} onChange={(checked) => setSettings((current) => ({ ...current, orderAlerts: checked }))} /><ToggleRow title="Product news and tips" description="Occasional product updates and best practices." checked={settings.marketing} onChange={(checked) => setSettings((current) => ({ ...current, marketing: checked }))} /></div>
       </Panel>
       <Panel title="Workspace details" description="These values only affect the sample profile shown in your browser.">
-        <div className="settings-form-grid"><label className="field-span">Workspace name<input value={settings.workspaceName} onChange={(event) => setSettings((current) => ({ ...current, workspaceName: event.target.value }))} /></label><label className="field-span">Store URL<input value={settings.storeUrl} onChange={(event) => setSettings((current) => ({ ...current, storeUrl: event.target.value }))} /></label><label className="field-span">Default currency<select value={settings.currency} onChange={(event) => setSettings((current) => ({ ...current, currency: event.target.value }))}><option>USD · US Dollar</option><option>EUR · Euro</option><option>GBP · British Pound</option></select></label></div>
+        <div className="settings-form-grid"><label className="field-span">Workspace name<input value={settings.workspaceName} onChange={(event) => setSettings((current) => ({ ...current, workspaceName: event.target.value }))} /></label><label className="field-span">Store URL<input value={settings.storeUrl} onChange={(event) => setSettings((current) => ({ ...current, storeUrl: event.target.value }))} /></label><label className="field-span">Default currency<input value={defaultDemoSettings.currency} readOnly /><small>All sample revenue is shown in USD.</small></label></div>
       </Panel>
       <section className="panel demo-notice"><div className="insight-orb"><Sparkles size={16} /></div><div><strong>Demo workspace</strong><p>Saved settings stay in this browser session. No account or server data is changed.</p></div><span>Sample data</span></section>
     </div>
@@ -419,13 +417,13 @@ function IntegrationsPage({ onNotify }: { onNotify: Notify }) {
   </div>
 }
 
-export function SecondaryPage({ page, onNotify, onNavigate }: { page: string; onNotify: Notify; onNavigate?: (path: string) => void }) {
+export function SecondaryPage({ page, onNotify, onNavigate, onSettingsSaved }: { page: string; onNotify: Notify; onNavigate?: (path: string) => void; onSettingsSaved?: (settings: DemoSettings) => void }) {
   if (page === 'Revenue') return <RevenuePage onNotify={onNotify} />
   if (page === 'Customers') return <CustomersPage onNotify={onNotify} />
   if (page === 'Products') return <ProductsPage onNotify={onNotify} />
   if (page === 'Orders') return <OrdersPage onNotify={onNotify} />
   if (page === 'Payments') return <PaymentsPage onNotify={onNotify} />
-  if (page === 'Settings') return <SettingsPage onNotify={onNotify} />
+  if (page === 'Settings') return <SettingsPage onNotify={onNotify} onSettingsSaved={onSettingsSaved} />
   if (page === 'Integrations') return <IntegrationsPage onNotify={onNotify} />
   return <NotFoundPage onNotify={onNotify} onNavigate={onNavigate} />
 }

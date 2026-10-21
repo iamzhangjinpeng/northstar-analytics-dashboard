@@ -95,8 +95,10 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(95, 125, 247
 .topbar-divider { width: 1px; height: 20px; background: #e9edf2; }
 .icon-button { width: 31px; height: 31px; display: inline-grid; place-items: center; border: 0; border-radius: 8px; color: #8993a2; background: transparent; cursor: pointer; transition: background .16s, color .16s; }
 .icon-button:hover { color: #465368; background: #f4f6f8; }
-.notification-button { position: relative; }
-.notification-button i { width: 5px; height: 5px; position: absolute; top: 6px; right: 6px; border: 1px solid #fff; border-radius: 50%; background: #ee886a; }
+.notification-wrap { position: relative; }
+.notification-popover { width: 250px; position: absolute; top: calc(100% + 10px); right: -38px; z-index: 8; padding: 13px 14px; display: grid; gap: 5px; border: 1px solid #e8edf3; border-radius: 10px; background: #fff; box-shadow: 0 10px 30px #1e2d4518; }
+.notification-popover strong { color: #3b4656; font-size: 11px; }
+.notification-popover span { color: #8c96a5; font-size: 10px; line-height: 1.45; }
 .top-avatar { width: 29px; height: 29px; border: 2px solid #fff; box-shadow: 0 0 0 1px #e9edf2; cursor: pointer; }
 .content-wrap { width: min(100%, 1520px); margin: 0 auto; padding: 31px 38px 32px; }
 .page-intro { margin-bottom: 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
@@ -111,9 +113,8 @@ h1 { margin-bottom: 5px; color: #222936; font: 700 25px 'Manrope', sans-serif; l
 .range-switch button { min-width: 40px; height: 28px; padding: 0 9px; border: 0; border-radius: 6px; color: #8c96a5; background: transparent; font-size: 10px; cursor: pointer; }
 .range-switch button:hover { color: #536177; }
 .range-switch .range-active { color: #536ee5; background: #eff2ff; font-weight: 700; }
-.date-button { height: 36px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border: 1px solid #e8ecf1; border-radius: 8px; color: #687486; background: #fff; font-size: 10px; cursor: pointer; }
-.date-button:hover { border-color: #ccd4e2; }
-.date-button svg:first-child { color: #8b96a6; }
+.date-range-label { height: 36px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border: 1px solid #e8ecf1; border-radius: 8px; color: #687486; background: #fff; font-size: 10px; }
+.date-range-label svg { color: #8b96a6; }
 
 .kpi-grid { margin-bottom: 18px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
 .kpi-card, .panel { background: #fff; border: 1px solid #e9edf2; border-radius: 11px; box-shadow: 0 2px 3px rgba(25, 35, 55, .018); }
@@ -533,7 +534,7 @@ td { height: 53px; padding: 6px 11px; border-top: 1px solid #f0f2f5; color: #647
   .content-wrap { padding-right: 12px; padding-left: 12px; }
   .kpi-caption { display: none; }
   .kpi-value { font-size: 17px; }
-  .date-button { gap: 5px; padding: 0 7px; font-size: 9px; }
+  .date-range-label { gap: 5px; padding: 0 7px; font-size: 9px; }
   .range-switch button { min-width: 35px; }
   .metric-switcher { gap: 2px; }
   .metric-switcher button { padding: 0 6px; }

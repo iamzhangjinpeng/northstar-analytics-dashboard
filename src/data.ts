@@ -8,6 +8,38 @@ export interface TrendPoint {
   visitors: number
 }
 
+export interface DemoSettings {
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+  weeklyDigest: boolean
+  orderAlerts: boolean
+  marketing: boolean
+  workspaceName: string
+  storeUrl: string
+  currency: string
+}
+
+export const defaultDemoSettings: DemoSettings = {
+  firstName: 'Alex',
+  lastName: 'Morgan',
+  email: 'alex@studionorth.co',
+  role: 'Owner',
+  weeklyDigest: true,
+  orderAlerts: true,
+  marketing: false,
+  workspaceName: 'Studio North',
+  storeUrl: 'studio-north.example.com',
+  currency: 'USD · US Dollar',
+}
+
+export const periodTotals: Record<RangeKey, Pick<TrendPoint, 'revenue' | 'orders' | 'visitors'>> = {
+  '7D': { revenue: 24904, orders: 665, visitors: 20525 },
+  '30D': { revenue: 106731, orders: 2847, visitors: 87870 },
+  '90D': { revenue: 320193, orders: 8541, visitors: 263611 },
+}
+
 const thirtyDays: TrendPoint[] = [
   { day: 'Sep 21', revenue: 18200, orders: 410, visitors: 8100 },
   { day: 'Sep 23', revenue: 19400, orders: 438, visitors: 8420 },
@@ -53,10 +85,23 @@ const sevenDays: TrendPoint[] = [
   { day: 'Oct 20', revenue: 18100, orders: 412, visitors: 6840 },
 ]
 
+function scaleMetric(values: number[], target: number) {
+  const sourceTotal = values.reduce((sum, value) => sum + value, 0)
+  let assigned = 0
+  return values.map((value, index) => {
+    const scaled = index === values.length - 1 ? target - assigned : Math.round(value / sourceTotal * target)
+    assigned += scaled
+    return scaled
+  })
+}
+
 export const getTrend = (range: RangeKey): TrendPoint[] => {
-  if (range === '7D') return sevenDays
-  if (range === '90D') return ninetyDays
-  return thirtyDays
+  const source = range === '7D' ? sevenDays : range === '90D' ? ninetyDays : thirtyDays
+  const totals = periodTotals[range]
+  const revenue = scaleMetric(source.map((point) => point.revenue), totals.revenue)
+  const orders = scaleMetric(source.map((point) => point.orders), totals.orders)
+  const visitors = scaleMetric(source.map((point) => point.visitors), totals.visitors)
+  return source.map((point, index) => ({ ...point, revenue: revenue[index], orders: orders[index], visitors: visitors[index] }))
 }
 
 export const channelData = [
@@ -67,6 +112,17 @@ export const channelData = [
   { name: 'Email', amount: 8200, color: '#e69baa' },
 ]
 
+export function getChannelData(range: RangeKey) {
+  const target = periodTotals[range].revenue
+  const baseTotal = channelData.reduce((sum, channel) => sum + channel.amount, 0)
+  let assigned = 0
+  return channelData.map((channel, index) => {
+    const amount = index === channelData.length - 1 ? target - assigned : Math.round(channel.amount / baseTotal * target)
+    assigned += amount
+    return { ...channel, amount }
+  })
+}
+
 export const productRevenueByCategory = [
   { name: 'Home & living', amount: 38420, color: '#5f7df7' },
   { name: 'Accessories', amount: 27108, color: '#79c8ad' },
@@ -75,6 +131,10 @@ export const productRevenueByCategory = [
 ]
 
 export const totalProductRevenue = productRevenueByCategory.reduce((sum, category) => sum + category.amount, 0)
+
+export const refundTotal = 2148
+export const netRevenue = totalProductRevenue - refundTotal
+export const averageOrderValue = totalProductRevenue / periodTotals['30D'].orders
 
 export const orders = [
   { id: 'ORD-2841', customer: 'Sophie Laurent', initials: 'SL', color: 'lavender', email: 'sophie.laurent@gmail.com', source: 'Direct', date: 'Oct 20, 2026', amount: 284.0, status: 'Paid' },
