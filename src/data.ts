@@ -40,6 +40,31 @@ export const periodTotals: Record<RangeKey, Pick<TrendPoint, 'revenue' | 'orders
   '90D': { revenue: 320193, orders: 8541, visitors: 263611 },
 }
 
+const previousPeriodTotals: Record<RangeKey, Pick<TrendPoint, 'revenue' | 'orders' | 'visitors'>> = {
+  '7D': { revenue: 23000, orders: 625, visitors: 18125 },
+  '30D': { revenue: 94600, orders: 2631, visitors: 74092 },
+  '90D': { revenue: 257142, orders: 7280, visitors: 219463 },
+}
+
+function percentChange(current: number, previous: number) {
+  const change = (current / previous - 1) * 100
+  return `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`
+}
+
+export function getPeriodComparison(range: RangeKey) {
+  const current = periodTotals[range]
+  const previous = previousPeriodTotals[range]
+  const currentConversion = current.orders / current.visitors * 100
+  const previousConversion = previous.orders / previous.visitors * 100
+  const conversionChange = currentConversion - previousConversion
+  return {
+    revenue: percentChange(current.revenue, previous.revenue),
+    orders: percentChange(current.orders, previous.orders),
+    visitors: percentChange(current.visitors, previous.visitors),
+    conversion: `${conversionChange >= 0 ? '+' : ''}${conversionChange.toFixed(2)} pp`,
+  }
+}
+
 const thirtyDays: TrendPoint[] = [
   { day: 'Sep 21', revenue: 18200, orders: 410, visitors: 8100 },
   { day: 'Sep 23', revenue: 19400, orders: 438, visitors: 8420 },

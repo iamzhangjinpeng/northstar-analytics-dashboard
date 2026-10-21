@@ -51,7 +51,9 @@ npm run preview
 
 ## Deploy
 
-The GitHub Actions workflow builds the dashboard and publishes `dist/` to GitHub Pages on each push to `main`. For a Vercel preview, import this repository and use the default Vite build settings (`npm run build`, output directory `dist`).
+The current public demo is hosted on GitHub Pages: https://iamzhangjinpeng.github.io/northstar-analytics-dashboard/. Each push to `main` triggers GitHub Actions to build the dashboard and publish `dist/`.
+
+`vercel.json` includes the SPA fallback for an optional Vercel deployment. This repository is not currently deployed on Vercel; if you set up a preview there, use `npm run build` with `dist` as the output directory.
 
 The GitHub Pages build also publishes a fallback page so shared links to routes such as `/orders` or `/revenue` open the dashboard directly.
 

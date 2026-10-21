@@ -247,17 +247,7 @@ td { height: 53px; padding: 6px 11px; border-top: 1px solid #f0f2f5; color: #647
 .pagination > span { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 5px; color: #5d72df; background: #eef1ff; font-weight: 700; }
 .page-footer { padding: 17px 2px 0; display: flex; align-items: center; gap: 14px; color: #9ba4b1; font-size: 9px; }
 .page-footer > span:nth-child(2) { margin-right: auto; }
-.page-footer button { padding: 3px 0; display: inline-flex; align-items: center; gap: 5px; border: 0; color: #9ba4b1; background: transparent; font-size: 9px; cursor: pointer; }
-.page-footer button:hover { color: #637189; }
-.floating-actions { position: fixed; right: 28px; bottom: 23px; z-index: 6; padding: 5px; display: flex; align-items: center; gap: 4px; border: 1px solid #e5e9ef; border-radius: 10px; background: #fff; box-shadow: 0 7px 24px #26334a18; }
-.floating-actions button { height: 30px; padding: 0 9px; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; font-size: 9px; font-weight: 600; cursor: pointer; }
-.refresh-button { color: #6c7788; background: #fff; }
-.refresh-button:hover { background: #f5f6f8; }
-.refresh-button:disabled { opacity: .75; cursor: wait; }
-.export-button { color: #fff; background: #5e76ed; box-shadow: 0 2px 4px #5e76ed44; }
-.export-button:hover { background: #4b65e1; }
-.spin { animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+.export-inline { padding-right: 8px; padding-left: 8px; color: #63738a; }
 .toast { position: fixed; top: 76px; right: 26px; z-index: 9; padding: 10px 13px 10px 9px; display: flex; align-items: center; gap: 8px; border: 1px solid #e7ebf0; border-radius: 9px; color: #546174; background: #fff; box-shadow: 0 8px 24px #25324a1a; font-size: 11px; animation: toast-in .2s ease-out; }
 .toast > span { width: 21px; height: 21px; display: grid; place-items: center; border-radius: 6px; color: #28896b; background: #eaf6f0; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
@@ -527,7 +517,6 @@ td { height: 53px; padding: 6px 11px; border-top: 1px solid #f0f2f5; color: #647
   .table-footer { padding: 0 12px; }
   .page-footer { align-items: flex-start; flex-direction: column; gap: 7px; }
   .page-footer > span:nth-child(2) { margin-right: 0; }
-  .floating-actions { right: 12px; bottom: 12px; }
 }
 
 @media (max-width: 390px) {

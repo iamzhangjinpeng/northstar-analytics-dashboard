@@ -15,7 +15,6 @@ import {
   Download,
   LayoutDashboard,
   Link2,
-  LoaderCircle,
   Menu,
   MousePointer2,
   Package,
@@ -40,7 +39,7 @@ import {
   YAxis,
 } from 'recharts'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { defaultDemoSettings, getChannelData, getTrend, orders, periodTotals, type DemoSettings, type MetricKey, type Order, type RangeKey } from './data'
+import { defaultDemoSettings, getChannelData, getPeriodComparison, getTrend, orders, periodTotals, type DemoSettings, type MetricKey, type Order, type RangeKey } from './data'
 
 const SecondaryPage = lazy(() => import('./secondary-pages').then(({ SecondaryPage: Page }) => ({ default: Page })))
 
@@ -185,7 +184,8 @@ function KpiCard({ title, value, change, caption, icon: Icon, tone, sparkline }:
   tone: 'blue' | 'green' | 'orange' | 'purple'
   sparkline: number[]
 }) {
-  const max = Math.max(...sparkline)
+  const min = Math.min(...sparkline)
+  const spread = Math.max(...sparkline) - min || 1
   return (
     <article className="kpi-card">
       <div className="kpi-topline">
@@ -200,7 +200,7 @@ function KpiCard({ title, value, change, caption, icon: Icon, tone, sparkline }:
         <span className="kpi-caption">{caption}</span>
         <svg className="sparkline" viewBox="0 0 140 28" aria-hidden="true">
           <polyline
-            points={sparkline.map((point, index) => `${index * 12},${25 - (point / max) * 20}`).join(' ')}
+            points={sparkline.map((point, index) => `${(index / Math.max(1, sparkline.length - 1)) * 138},${25 - ((point - min) / spread) * 20}`).join(' ')}
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -268,7 +268,6 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [query, setQuery] = useState('')
   const [orderStatus, setOrderStatus] = useState('All statuses')
-  const [refreshing, setRefreshing] = useState(false)
   const [toast, setToast] = useState('')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [demoSettings, setDemoSettings] = useState<DemoSettings>(() => {
@@ -282,6 +281,7 @@ export default function App() {
   const trend = getTrend(range)
   const channels = getChannelData(range)
   const totals = periodTotals[range]
+  const comparison = getPeriodComparison(range)
   const conversionRate = (totals.orders / totals.visitors * 100).toFixed(2)
   const periodLabel = range === '7D' ? 'last 7 days' : range === '90D' ? 'last 90 days' : 'last 30 days'
   const initials = `${demoSettings.firstName.slice(0, 1)}${demoSettings.lastName.slice(0, 1)}`
@@ -298,11 +298,6 @@ export default function App() {
   const notify = (message: string) => {
     setToast(message)
     window.setTimeout(() => setToast(''), 2400)
-  }
-
-  const handleRefresh = () => {
-    setRefreshing(true)
-    window.setTimeout(() => { setRefreshing(false); notify('Sample dashboard refreshed') }, 800)
   }
 
   const handleExport = () => {
@@ -357,10 +352,10 @@ export default function App() {
           </section>
 
           <section className="kpi-grid" aria-label="Key performance indicators">
-            <KpiCard title="Total revenue" value={`$${totals.revenue.toLocaleString('en-US')}`} change="12.8%" caption="vs. previous period" icon={CreditCard} tone="blue" sparkline={[4, 5, 4, 7, 6, 8, 7, 11, 9, 13, 12, 17]} />
-            <KpiCard title="Total orders" value={totals.orders.toLocaleString('en-US')} change="8.2%" caption="vs. previous period" icon={ShoppingBag} tone="green" sparkline={[5, 4, 7, 6, 8, 7, 9, 8, 11, 10, 14, 16]} />
-            <KpiCard title="Store visitors" value={totals.visitors.toLocaleString('en-US')} change="18.6%" caption="vs. previous period" icon={UsersRound} tone="orange" sparkline={[3, 5, 4, 8, 6, 10, 8, 9, 12, 10, 16, 19]} />
-            <KpiCard title="Conversion rate" value={`${conversionRate}%`} change="-0.4%" caption="vs. previous period" icon={MousePointer2} tone="purple" sparkline={[16, 14, 16, 13, 15, 14, 12, 14, 11, 13, 10, 9]} />
+            <KpiCard title="Total revenue" value={`$${totals.revenue.toLocaleString('en-US')}`} change={comparison.revenue} caption="vs. previous period" icon={CreditCard} tone="blue" sparkline={trend.map((point) => point.revenue)} />
+            <KpiCard title="Total orders" value={totals.orders.toLocaleString('en-US')} change={comparison.orders} caption="vs. previous period" icon={ShoppingBag} tone="green" sparkline={trend.map((point) => point.orders)} />
+            <KpiCard title="Store visitors" value={totals.visitors.toLocaleString('en-US')} change={comparison.visitors} caption="vs. previous period" icon={UsersRound} tone="orange" sparkline={trend.map((point) => point.visitors)} />
+            <KpiCard title="Conversion rate" value={`${conversionRate}%`} change={comparison.conversion} caption="vs. previous period" icon={MousePointer2} tone="purple" sparkline={trend.map((point) => point.orders / point.visitors * 100)} />
           </section>
 
           <section className="analytics-grid">
@@ -386,7 +381,7 @@ export default function App() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="chart-footer"><span><strong>+24.6%</strong> <span>compared to previous period</span></span><button className="text-link" onClick={() => navigateToPage('Revenue')}>View report <ArrowRight size={14} /></button></div>
+              <div className="chart-footer"><span><strong>{comparison.revenue}</strong> <span>compared to previous period</span></span><button className="text-link" onClick={() => navigateToPage('Revenue')}>View report <ArrowRight size={14} /></button></div>
             </div>
             <ChannelChart channels={channels} onOpenReport={() => navigateToPage('Revenue')} />
           </section>
@@ -404,6 +399,7 @@ export default function App() {
               <div className="orders-actions">
                 <label className="search-box"><Search size={15} /><input aria-label="Search orders" placeholder="Search orders" value={query} onChange={(event) => setQuery(event.target.value)} /><kbd><Command size={10} /> K</kbd></label>
                 <label className="table-filter-control"><SlidersHorizontal size={15} /><select aria-label="Filter orders by status" value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)}><option>All statuses</option><option>Paid</option><option>Processing</option><option>Refunded</option></select></label>
+                <button className="view-all export-inline" onClick={handleExport}><Download size={14} /> Export CSV</button>
                 <button className="view-all" onClick={() => navigateToPage('Orders')}>View all <ArrowRight size={14} /></button>
               </div>
             </div>
@@ -425,17 +421,13 @@ export default function App() {
             <div className="table-footer"><span>Showing <strong>{filteredOrders.length}</strong> of <strong>{orders.length}</strong> sample orders</span></div>
           </section>
 
-          <footer className="page-footer"><span>© 2026 Northstar Analytics</span><span>All figures are sample data for demonstration.</span><button onClick={handleRefresh}><Activity size={13} /> Refresh demo data</button></footer>
+          <footer className="page-footer"><span>© 2026 Northstar Analytics</span><span>All figures are sample data for demonstration.</span></footer>
         </div>
           } />
           {secondaryRoutes.map(({ path: routePath, page }) => <Route key={routePath} path={routePath} element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page={page} onNotify={notify} onNavigate={navigate} onSettingsSaved={setDemoSettings} /></Suspense>} />)}
           <Route path="*" element={<Suspense fallback={<div className="content-wrap route-page route-loading">Loading workspace…</div>}><SecondaryPage page="Not found" onNotify={notify} onNavigate={navigate} onSettingsSaved={setDemoSettings} /></Suspense>} />
         </Routes>
       </main>
-      <div className="floating-actions">
-        <button className="refresh-button" onClick={handleRefresh} disabled={refreshing}>{refreshing ? <LoaderCircle className="spin" size={15} /> : <Activity size={15} />}{refreshing ? 'Refreshing' : 'Refresh demo'}</button>
-        {(activePage === 'Overview' || activePage === 'Orders') && <button className="export-button" onClick={handleExport}><Download size={15} /> Export CSV</button>}
-      </div>
       {toast && <div className="toast" role="status"><span><Check size={15} /></span>{toast}</div>}
     </div>
   )
