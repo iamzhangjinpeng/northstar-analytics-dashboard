@@ -381,7 +381,7 @@ export default function App() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="chart-footer"><span><strong>{comparison.revenue}</strong> <span>compared to previous period</span></span><button className="text-link" onClick={() => navigateToPage('Revenue')}>View report <ArrowRight size={14} /></button></div>
+              <div className="chart-footer"><span><strong className="tabular-nums">{comparison[metric]}</strong> <span>compared to previous period</span></span><button className="text-link" onClick={() => navigateToPage('Revenue')}>View report <ArrowRight size={14} /></button></div>
             </div>
             <ChannelChart channels={channels} onOpenReport={() => navigateToPage('Revenue')} />
           </section>
