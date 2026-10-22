@@ -53,7 +53,7 @@ npm run preview
 
 The current public demo is hosted on GitHub Pages: https://iamzhangjinpeng.github.io/northstar-analytics-dashboard/. Each push to `main` triggers GitHub Actions to build the dashboard and publish `dist/`.
 
-Netlify is also supported through `netlify.toml`, which builds with `npm run build`, publishes `dist/`, and rewrites client-side routes to `index.html` so direct links and browser refreshes work. `vercel.json` includes the equivalent SPA fallback for Vercel.
+Netlify is also supported through `netlify.toml`, which builds with `npm run build` and publishes `dist/`. The `public/_redirects` rule is copied into the build output and rewrites client-side routes to `index.html`, so direct links and browser refreshes work even when deploying the built folder manually. `vercel.json` includes the equivalent SPA fallback for Vercel.
 
 The GitHub Pages build also publishes a fallback page so shared links to routes such as `/orders` or `/revenue` open the dashboard directly.
 
