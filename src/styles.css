@@ -269,7 +269,8 @@ td { height: 53px; padding: 6px 11px; border-top: 1px solid #f0f2f5; color: #647
 .route-stat-card .kpi-label { margin-top: 11px; }
 .route-stat-card .kpi-value { font-size: 21px; }
 .route-stat-change { margin-top: 9px; display: flex; align-items: center; gap: 6px; color: #9aa3b0; font-size: 9px; }
-.route-page > .route-panel { margin-bottom: 15px; padding: 17px 18px 14px; }
+.route-page .route-panel { padding: 17px 18px 14px; }
+.route-page > .route-panel { margin-bottom: 15px; }
 .route-page .route-panel > .panel-heading { margin-bottom: 15px; }
 .route-page .route-panel > .panel-heading h2 { font-size: 13px; }
 .route-page .route-panel > .panel-heading p { font-size: 10px; }
